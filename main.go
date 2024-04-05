@@ -4,9 +4,10 @@ import (
 	"bufio"
 	"encoding/csv"
 	"fmt"
-	"io"
 	"os"
+	"runtime/trace"
 	"strconv"
+	"strings"
 )
 
 type Station struct {
@@ -18,27 +19,33 @@ type Station struct {
 }
 
 func main() {
+	traceFile, err := os.Create("t.out")
+	if err != nil {
+		panic("failed to create trace file")
+	}
+
+	trace.Start(traceFile)
+	defer trace.Stop()
+
 	stations := make(map[string]*Station)
 	file, err := os.Open("measurements.txt")
 	if err != nil {
 		panic("failed to open file")
 	}
 
+	scanner := bufio.NewScanner(file)
+
 	csv := csv.NewReader(file)
 	csv.Comma = ';'
 
-	for {
-		line, err := csv.Read()
-		if err == io.EOF {
-			break
-		}
-		if err != nil {
-			fmt.Println("failed to read line " + err.Error())
+	for scanner.Scan() {
+		stationName, tempStr, sepFound := strings.Cut(scanner.Text(), ";")
+
+		if !sepFound {
 			continue
 		}
 
-		stationName := line[0]
-		temp, _ := strconv.ParseFloat(line[1], 64)
+		temp, _ := strconv.ParseFloat(tempStr, 64)
 		if _, ok := stations[stationName]; !ok {
 			stations[stationName] = &Station{
 				Name:  stationName,
